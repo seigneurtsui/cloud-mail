@@ -1,10 +1,24 @@
 name = "cloud-mail"
 main = "src/index.js"
 compatibility_date = "2025-06-04"
+compatibility_flags = ["nodejs_compat"]
 keep_vars = true
 
 [observability]
 enabled = true
+
+#[[d1_databases]]
+#binding = "db"			# D1 database binding (do not change)
+#database_name = ""		# Your D1 database name
+#database_id = ""		# Your D1 database ID
+
+#[[kv_namespaces]]
+#binding = "kv"			# KV binding (do not change)
+#id = ""				# Your KV namespace ID
+
+#[[r2_buckets]]
+#binding = "r2"			# R2 binding (do not change)
+#bucket_name = ""		# Your R2 bucket name
 
 [[d1_databases]]
 binding = "db"			#d1数据库绑定名默认不可修改
@@ -19,21 +33,46 @@ id = "07bad49862734db382f98e68479c5f49"					#kv数据库id
 binding = "r2"			#r2对象存储绑定名默认不可修改
 bucket_name = "cloud-mail"		#r2对象存储桶的名字
 
+
 [assets]
-binding = "assets"		#静态资源绑定名默认不可修改
-directory = "./dist"	#前端vue项目打包的静态资源存放位置,默认dist
+binding = "assets"
+directory = "./dist"
 not_found_handling = "single-page-application"
 run_worker_first = true
 
 [triggers]
-crons = ["0 16 * * *"]	#定时任务每天晚上12点执行
+crons = ["0 16 * * *"]	# Daily housekeeping at 16:00 UTC
 
+# Uncomment to enable Cloudflare Email Service for outbound sending
+[[send_email]]
+name = "EMAIL"
+
+# --- AI Email Agent (optional, requires Workers AI access) ---
+# Uncomment to enable the AIChatAgent side panel + auto-draft on inbound email.
+# Model: @cf/moonshotai/kimi-k2.5
+[ai]
+binding = "AI"
+
+[[durable_objects.bindings]]
+name = "EMAIL_AGENT"
+class_name = "EmailAgent"
+
+#[[migrations]]
+#tag = "v1-add-email-agent"
+#new_sqlite_classes = ["EmailAgent"]
+
+#[vars]
+#orm_log = false
+#domain = '["example.com"]'	# Your email domains (array)
+#admin = "admin@example.com"	# Admin email address
+#jwt_secret = ""				# Random string for JWT signing
 
 [vars]
 orm_log = false
 domain = ["chez.de5.net"]				#邮件域名可可配置多个 示例: ["example1.com","example2.com"]
 admin = "admin@chez.de5.net"				#管理员的邮箱	示例: admin@example.com
 jwt_secret = "fafdc3f7-8817-4156-be70-49f1e0b577ff"			#jwt令牌的密钥,随便填一串字符串
+
 
 [build]
 command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"

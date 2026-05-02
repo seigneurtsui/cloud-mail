@@ -177,6 +177,33 @@
                 </div>
               </div>
               <div class="setting-item">
+                <div>
+                  <span>{{ $t('emailProvider') }}</span>
+                  <el-tooltip effect="dark" :content="$t('emailProviderDesc')">
+                    <Icon class="warning" icon="fe:warning" width="18" height="18"/>
+                  </el-tooltip>
+                </div>
+                <div>
+                  <el-select v-model="setting.emailProvider" @change="change" size="small" style="width: 200px">
+                    <el-option value="cf-first" :label="$t('cfFirst')"/>
+                    <el-option value="resend-only" :label="$t('resendOnly')"/>
+                    <el-option value="cf-only" :label="$t('cfOnly')"/>
+                  </el-select>
+                </div>
+              </div>
+              <div class="setting-item">
+                <div>
+                  <span>{{ $t('externalApiKey') }}</span>
+                  <el-tooltip effect="dark" :content="$t('externalApiKeyDesc')">
+                    <Icon class="warning" icon="fe:warning" width="18" height="18"/>
+                  </el-tooltip>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <el-input v-model="setting.externalApiKey" size="small" style="width: 280px" :placeholder="$t('externalApiKeyPlaceholder')" readonly/>
+                  <el-button size="small" type="primary" @click="generateApiKey">{{ $t('generate') }}</el-button>
+                </div>
+              </div>
+              <div class="setting-item">
                 <div><span>{{ $t('resendToken') }}</span></div>
                 <div>
                   <el-button class="opt-button" style="margin-top: 0" @click="openResendList" size="small"
@@ -358,7 +385,7 @@
               <div class="concerning-item">
                 <span>{{ $t('version') }} :</span>
                 <el-badge is-dot :hidden="!hasUpdate">
-                  <el-button @click="jump('https://github.com/maillab/cloud-mail/releases')">
+                  <el-button @click="jump('https://github.com/AndrewYukon/cloud-mail-plus/releases')">
                     {{ currentVersion }}
                     <template #icon>
                       <Icon icon="qlementine-icons:version-control-16" style="font-size: 20px" color="#1890FF"/>
@@ -369,32 +396,23 @@
               <div class="concerning-item">
                 <span>{{ $t('community') }} : </span>
                 <div class="community">
-                  <el-button @click="jump('https://github.com/maillab/cloud-mail')">
+                  <el-button @click="jump('https://github.com/AndrewYukon/cloud-mail-plus')">
                     Github
                     <template #icon>
                       <Icon icon="codicon:github-inverted" width="22" height="22"/>
                     </template>
                   </el-button>
-                  <el-button @click="jump('https://t.me/cloud_mail_tg')">
-                    Telegram
+                  <el-button @click="jump('https://github.com/AndrewYukon/cloud-mail-plus/blob/main/doc/demo/Buy-me-a-coffee-WeChat.JPG')">
+                    {{ $t('buyMeCoffee') }}
                     <template #icon>
-                      <Icon icon="logos:telegram" width="30" height="30"/>
+                      <Icon color="#79D6B5" icon="simple-icons:buymeacoffee" width="20" height="20"/>
                     </template>
                   </el-button>
                 </div>
               </div>
               <div class="concerning-item">
-                <span>{{ $t('support') }} : </span>
-                <el-button @click="jump('https://doc.skymail.ink/support.html')">
-                  {{ t('supportDesc') }}
-                  <template #icon>
-                    <Icon color="#79D6B5" icon="simple-icons:buymeacoffee" width="20" height="20"/>
-                  </template>
-                </el-button>
-              </div>
-              <div class="concerning-item">
                 <span>{{ $t('help') }} : </span>
-                <el-button @click="jump('https://doc.skymail.ink')">
+                <el-button @click="jump('https://github.com/AndrewYukon/cloud-mail-plus/blob/main/docs/external-api-guide.md')">
                   {{ t('document') }}
                   <template #icon>
                     <Icon color="#79D6B5" icon="fluent-color:document-32" width="18" height="18"/>
@@ -925,7 +943,7 @@ const resendList = computed(() => {
 
 function getUpdate() {
   if (getUpdateErrorCount > 5 || !getUpdateErrorCount) return
-  axios.get('https://api.github.com/repos/maillab/cloud-mail/releases/latest').then(({data}) => {
+  axios.get('https://api.github.com/repos/AndrewYukon/cloud-mail-plus/releases/latest').then(({data}) => {
     hasUpdate.value = data.name !== currentVersion
     getUpdateErrorCount = 0
   }).catch(e => {
@@ -1239,6 +1257,13 @@ function openCut() {
 function saveR2domain() {
   const settingForm = {r2Domain: r2DomainInput.value}
   editSetting(settingForm)
+}
+
+function generateApiKey() {
+  const key = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map(b => b.toString(16).padStart(2, '0')).join('')
+  setting.value.externalApiKey = key
+  change({ externalApiKey: key })
 }
 
 function openResendForm() {

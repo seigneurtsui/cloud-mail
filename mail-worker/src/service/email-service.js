@@ -8,6 +8,7 @@ import accountService from './account-service';
 import BizError from '../error/biz-error';
 import emailUtils from '../utils/email-utils';
 import { Resend } from 'resend';
+import cfEmailService from './cf-email-service';
 import attService from './att-service';
 import { parseHTML } from 'linkedom';
 import userService from './user-service';
@@ -163,7 +164,7 @@ const emailService = {
 			attachments //附件
 		} = params;
 
-		const { resendTokens, r2Domain, send, domainList } = await settingService.query(c);
+		const { resendTokens, r2Domain, send, domainList, emailProvider } = await settingService.query(c);
 
 		let { imageDataList, html } = await attService.toImageUrlHtml(c, content);
 
@@ -231,8 +232,8 @@ const emailService = {
 		const domain = emailUtils.getDomain(accountRow.email);
 		const resendToken = resendTokens[domain];
 
-		//如果接收方存在站外邮箱，又没有resend token
-		if (!resendToken && !allInternal) {
+		//如果接收方存在站外邮箱，且是resend-only模式又没有resend token
+		if (!resendToken && !allInternal && emailProvider === settingConst.emailProvider.RESEND_ONLY) {
 			throw new BizError(t('noResendToken'));
 		}
 
@@ -257,11 +258,10 @@ const emailService = {
 		}
 
 		let resendResult = {};
+		let cfSent = false;
 
-		//存在站外时邮箱全部由resend发送
+		//存在站外时发送邮件：优先CF Email Service，失败后回退Resend
 		if (!allInternal) {
-
-			const resend = new Resend(resendToken);
 
 			const sendForm = {
 				from: `${name} <${accountRow.email}>`,
@@ -279,12 +279,34 @@ const emailService = {
 				};
 			}
 
-			resendResult = await resend.emails.send(sendForm);
+			const useCf = emailProvider !== settingConst.emailProvider.RESEND_ONLY;
+			const useResend = emailProvider !== settingConst.emailProvider.CF_ONLY;
+
+			//尝试CF Email Service发送
+			if (useCf && receiveEmail.length <= 50) {
+				try {
+					await cfEmailService.send(c.env, sendForm);
+					cfSent = true;
+				} catch (cfError) {
+					console.error(`[CF Email] failed: code=${cfError.code || 'none'} msg=${cfError.message}`);
+					if (!useResend) {
+						throw new BizError(`CF Email failed: ${cfError.message}`);
+					}
+				}
+			}
+
+			//CF失败或不可用时回退Resend
+			if (!cfSent) {
+				if (!resendToken) {
+					throw new BizError(t('noResendToken'));
+				}
+				const resend = new Resend(resendToken);
+				resendResult = await resend.emails.send(sendForm);
+			}
 
 		}
 
 		const { data, error } = resendResult;
-
 
 		if (error) {
 			throw new BizError(error.message);
@@ -303,7 +325,7 @@ const emailService = {
 		emailData.content = html;
 		emailData.text = text;
 		emailData.accountId = accountId;
-		emailData.status = emailConst.status.SENT;
+		emailData.status = cfSent ? emailConst.status.DELIVERED : emailConst.status.SENT;
 		emailData.type = emailConst.type.SEND;
 		emailData.userId = userId;
 		emailData.resendEmailId = data?.id;
@@ -813,6 +835,54 @@ const emailService = {
 	async read(c, params, userId) {
 		const { emailIds } = params;
 		await orm(c).update(email).set({ unread: emailConst.unread.READ }).where(and(eq(email.userId, userId), inArray(email.emailId, emailIds)));
+	},
+
+	// --- AI agent helpers (draft + send + delete primitives) ---
+	async detail(c, emailId, userId) {
+		return orm(c).select().from(email)
+			.where(and(eq(email.emailId, emailId), eq(email.userId, userId), eq(email.isDel, isDel.NORMAL)))
+			.get();
+	},
+
+	async saveDraft(c, fields) {
+		const row = {
+			userId: fields.userId,
+			accountId: fields.accountId || 0,
+			sendEmail: '',
+			toEmail: fields.toEmail || '',
+			subject: fields.subject || '',
+			content: fields.content || '',
+			text: fields.text || '',
+			inReplyTo: fields.inReplyTo || '',
+			relation: fields.relation || '',
+			messageId: fields.messageId || '',
+			type: emailConst.type.SEND,
+			status: emailConst.status.SAVING,
+			aiMetadata: fields.aiMetadata || '',
+			isDel: isDel.NORMAL,
+		};
+		const [inserted] = await orm(c).insert(email).values(row).returning({ emailId: email.emailId });
+		return inserted.emailId;
+	},
+
+	async markSent(c, emailId, userId, sendResult) {
+		await orm(c).update(email).set({
+			status: emailConst.status.SENT,
+			messageId: sendResult?.messageId || '',
+		}).where(and(eq(email.emailId, emailId), eq(email.userId, userId))).run();
+	},
+
+	async softDelete(c, emailId, userId) {
+		await orm(c).update(email).set({ isDel: isDel.DELETE })
+			.where(and(eq(email.emailId, emailId), eq(email.userId, userId)))
+			.run();
+	},
+
+	async permanentDelete(c, emailId, userId) {
+		await attService.removeByEmailIds(c, [emailId]);
+		await orm(c).delete(email)
+			.where(and(eq(email.emailId, emailId), eq(email.userId, userId)))
+			.run();
 	}
 };
 

@@ -16,9 +16,13 @@
       <div v-else class="dark-icon icon-item" @click="openDark($event)">
         <Icon icon="solar:moon-linear"/>
       </div>
+      <div class="icon-item" @click="changeLang(settingStore.lang === 'en' ? 'zh' : 'en')" :title="settingStore.lang === 'en' ? '切换中文' : 'Switch to English'" style="cursor:pointer;font-size:13px;font-weight:600;opacity:0.75;">
+        {{ settingStore.lang === 'en' ? '中' : 'EN' }}
+      </div>
       <div class="notice icon-item" @click="openNotice">
         <Icon icon="streamline-plump:announcement-megaphone"/>
       </div>
+      <AgentToggle />
       <el-dropdown ref="userinfoRef" @visible-change="e => userInfoShow = e" :teleported="false" popper-class="detail-dropdown">
         <div class="avatar" @click="userInfoHide" >
           <div class="avatar-text">
@@ -75,6 +79,7 @@
 <script setup>
 import router from "@/router";
 import hanburger from '@/components/hamburger/index.vue'
+import AgentToggle from '@/components/agent/AgentToggle.vue'
 import {logout} from "@/request/login.js";
 import {Icon} from "@iconify/vue";
 import {useUiStore} from "@/store/ui.js";
