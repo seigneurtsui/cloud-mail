@@ -54,13 +54,13 @@ name = "EMAIL"
 [ai]
 binding = "AI"
 
-#~ [[durable_objects.bindings]]
-#~ name = "EMAIL_AGENT"
-#~ class_name = "EmailAgent"
+[[durable_objects.bindings]]
+name = "EMAIL_AGENT"
+class_name = "EmailAgent"
 
-#[[migrations]]
-#tag = "v1-add-email-agent"
-#new_sqlite_classes = ["EmailAgent"]
+[[migrations]]
+tag = "v1-add-email-agent"
+new_sqlite_classes = ["EmailAgent"]
 
 #[vars]
 #orm_log = false
