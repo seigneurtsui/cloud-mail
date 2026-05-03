@@ -23,7 +23,8 @@ enabled = true
 [[d1_databases]]
 binding = "db"			#d1数据库绑定名默认不可修改
 database_name = "cloud-mail"		#d1数据库名字
-database_id = "95178815-3ccb-46b0-8f31-d107cb8671bc"		#d1数据库id
+#~ database_id = "95178815-3ccb-46b0-8f31-d107cb8671bc"		#d1数据库id
+database_id = "a856b29f-d2a0-45b2-99b9-f7092086ea3b"		#d1数据库id
 
 [[kv_namespaces]]
 binding = "kv"			#kv绑定名默认不可修改
